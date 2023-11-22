@@ -3,13 +3,17 @@ from django.views.decorators.csrf import csrf_exempt
 from rest_framework.parsers import JSONParser
 from .models import Snippet
 from .serializers import SnippetSerializer
-
-from rest_framework import mixins
+from .permissions import IsOwnerOrReadOnly
+from rest_framework import mixins, permissions
 from rest_framework import generics
 
 from .models import Snippet
 from .serializers import SnippetSerializer
+from django.contrib.auth.models import User
+from rest_framework import generics
 
+from .models import Snippet
+from .serializers import SnippetSerializer, UserSerializer
 
 class SnippetList(mixins.ListModelMixin,
                  mixins.CreateModelMixin,
@@ -155,3 +159,20 @@ def snippet_detail(request, pk):
        snippet.delete()
        return Response(status=status.HTTP_204_NO_CONTENT)
 
+   permission_classes = [permissions.IsAuthenticatedOrReadOnly, IsOwnerOrReadOnly]
+
+class UserList(generics.ListAPIView):
+   queryset = User.objects.all()
+   serializer_class = UserSerializer
+
+
+class UserDetail(generics.RetrieveAPIView):
+   queryset = User.objects.all()
+   serializer_class = UserSerializer
+
+class SnippetList(generics.ListCreateAPIView):
+   queryset = Snippet.objects.all()
+   serializer_class = SnippetSerializer
+
+   def perform_create(self, serializer):
+       serializer.save(owner=self.request.user)
